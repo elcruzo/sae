@@ -1,44 +1,51 @@
-# 22 — Sparse Autoencoders (TopK)
+# Sparse Autoencoders — TopK (default)
 
-From-scratch TopK SAE (OpenAI), ReLU+L1 (early Anthropic), and JumpReLU, trained on Elhage's toy model of superposition.
+From-scratch **TopK SAE** (OpenAI / Gao et al.), with named variants **L1** (ReLU + L1) and **JumpReLU** (learned threshold + L0 STEs). Trained on Elhage's toy model of superposition.
 
-## Papers
-
-- Bricken et al., *Towards Monosemanticity: Decomposing Language Models With Dictionary Learning* (Anthropic, 2023)
-- Templeton et al., *Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet* (Anthropic, 2024)
-- Gao, Gebauer, et al., *Scaling and Evaluating Sparse Autoencoders* (ICLR 2025) — TopK activation
-- Rajamanoharan et al., *Jumping Ahead: Improving Reconstruction Fidelity with JumpReLU SAEs*
-- Elhage et al., *Toy Models of Superposition* (2022)
-
-## Formulas
-
-Encoder (OpenAI TopK):
+## Default: TopK
 
 \[
-z = \mathrm{TopK}\bigl(W_{\mathrm{enc}}(x - b_{\mathrm{dec}}) + b_{\mathrm{enc}}\bigr)
-\]
-
-Decoder, with **unit-norm columns** of \(W_{\mathrm{dec}}\) (projected after every step):
-
-\[
+z = \mathrm{TopK}_k\bigl(W_{\mathrm{enc}}(x - b_{\mathrm{dec}}) + b_{\mathrm{enc}}\bigr)
+\qquad
 \hat x = W_{\mathrm{dec}} z + b_{\mathrm{dec}}
 \]
 
-Loss is \(\mathrm{MSE}(x,\hat x)\). Optional AuxK reconstructs the residual with the top-\(k_{\mathrm{aux}}\) dead latents. Latents that have not fired in \(N\) steps are resampled onto high-residual examples.
+Decoder columns are **unit-norm** (projected after every step). Loss is MSE; optional **AuxK** reconstructs the residual with the top-\(k_{\mathrm{aux}}\) dead latents (coefficient typically \(1/32\)). Encoder init = decoder transpose.
 
-ReLU+L1: \(z=\mathrm{ReLU}(\cdot)\), loss \(= \mathrm{MSE} + \lambda \|z\|_1\).
+## Named variant: L1
 
-JumpReLU: \(z = z_{\mathrm{pre}} \cdot H(z_{\mathrm{pre}} - \theta)\).
+`L1SAE`: \(z=\mathrm{ReLU}(\cdot)\), loss \(= \mathrm{MSE} + \lambda \|z\|_1\). Same unit-norm decoder projection (otherwise L1 is gamed by shrinking activations / growing decoder).
 
-Recovery: Hungarian-match decoder columns to the true feature dictionary; report mean cosine.
+## Named variant: JumpReLU
+
+`JumpReLUSAE`: \(z = z_{\mathrm{pre}} \cdot H(z_{\mathrm{pre}} - \theta)\) with per-latent \(\theta\). Threshold and L0 are trained with rectangle-kernel straight-through estimators (Rajamanoharan et al. Eqs. 11–12):
+
+\[
+\frac{\partial}{\partial\theta}\mathrm{JumpReLU}_\theta(z) = -\frac{\theta}{\varepsilon}K\!\left(\frac{z-\theta}{\varepsilon}\right),
+\qquad
+\frac{\partial}{\partial\theta}H(z-\theta) = -\frac{1}{\varepsilon}K\!\left(\frac{z-\theta}{\varepsilon}\right)
+\]
+
+with \(K=\mathrm{rect}\) and bandwidth \(\varepsilon\).
+
+## Dead-latent resampling
+
+Latents silent for \(N\) steps are **resampled** onto high-residual examples (Anthropic): decoder column ← unit residual direction; encoder row ← \(\sqrt{d}\) times that direction; \(b_{\mathrm{enc}}\leftarrow 0\).
+
+Recovery metric: Hungarian-match decoder columns to the true feature dictionary; report mean cosine.
 
 ## Papers on disk
 
 - [`papers/gao-scaling-monosemanticity-topk-sae-2024.pdf`](papers/gao-scaling-monosemanticity-topk-sae-2024.pdf) — Gao et al. Scaling and evaluating sparse autoencoders (2024) ([arXiv:2406.04093](https://arxiv.org/abs/2406.04093))
+- [`papers/rajamanoharan-jumprelu-sae-2024.pdf`](papers/rajamanoharan-jumprelu-sae-2024.pdf) — Rajamanoharan et al. JumpReLU SAEs (2024) ([arXiv:2407.14435](https://arxiv.org/abs/2407.14435))
+- [`papers/elhage-toy-models-superposition-2022.pdf`](papers/elhage-toy-models-superposition-2022.pdf) — Elhage et al. Toy Models of Superposition (2022)
+
+Also cited: Bricken et al. *Towards Monosemanticity* (Anthropic, 2023); Templeton et al. *Scaling Monosemanticity* (2024).
 
 ## Run
 
 ```bash
-python -m pytest 22-sae -q
-python 22-sae/demo.py
+pip install -r requirements.txt
+python demo.py
+python -m pytest test_sae.py -q
 ```

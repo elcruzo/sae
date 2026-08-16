@@ -6,7 +6,7 @@ import torch
 
 from sae import (
     JumpReLUSAE,
-    ReLUL1SAE,
+    L1SAE,
     TopKSAE,
     hungarian_decoder_cosine,
     sample_superposition,
@@ -28,13 +28,13 @@ def main() -> None:
         nnz = (topk.encode(x) != 0).float().sum(-1).mean().item()
     print(f"TopK  steps={len(losses)}  last_loss={losses[-1]:.4f}  mse={mse:.4f}  nnz={nnz:.1f}  match_cos={cos:.3f}")
 
-    l1 = ReLUL1SAE(d=d, n_latents=2 * n_f, l1=1.0)
+    l1 = L1SAE(d=d, n_latents=2 * n_f, l1=1.0)
     train_sae(l1, W, steps=200, batch=128, lr=2e-3, seed=1)
     with torch.no_grad():
         z = l1.encode(x)
-    print(f"ReLU+L1  frac_zero={(z == 0).float().mean():.3f}")
+    print(f"L1  frac_zero={(z == 0).float().mean():.3f}")
 
-    jump = JumpReLUSAE(d=d, n_latents=n_f, threshold=0.15)
+    jump = JumpReLUSAE(d=d, n_latents=n_f, threshold=0.15, l0_coef=0.05, bandwidth=0.1)
     train_sae(jump, W, steps=150, batch=128, lr=2e-3, seed=2)
     with torch.no_grad():
         zj = jump.encode(x)
