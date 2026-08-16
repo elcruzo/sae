@@ -46,6 +46,6 @@ Also cited: Bricken et al. *Towards Monosemanticity* (Anthropic, 2023); Templeto
 
 ```bash
 pip install -r requirements.txt
-python demo.py
+python main.py
 python -m pytest test_sae.py -q
 ```
