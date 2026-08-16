@@ -32,6 +32,10 @@ JumpReLU: \(z = z_{\mathrm{pre}} \cdot H(z_{\mathrm{pre}} - \theta)\).
 
 Recovery: Hungarian-match decoder columns to the true feature dictionary; report mean cosine.
 
+## Papers on disk
+
+- [`papers/gao-scaling-monosemanticity-topk-sae-2024.pdf`](papers/gao-scaling-monosemanticity-topk-sae-2024.pdf) — Gao et al. Scaling and evaluating sparse autoencoders (2024) ([arXiv:2406.04093](https://arxiv.org/abs/2406.04093))
+
 ## Run
 
 ```bash
