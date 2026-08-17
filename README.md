@@ -44,7 +44,9 @@ Also cited: Bricken et al. *Towards Monosemanticity* (Anthropic, 2023); Templeto
 
 ## Compared to OpenAI / Anthropic SAE
 
-**What you learn here:** TopK SAE (OpenAI), unit-norm decoder, AuxK dead-latent loss, plus named L1 and JumpReLU — trained on Elhage toy superposition.
+**What you learn here:**
+- TopK SAE (OpenAI), unit-norm decoder, AuxK dead-latent loss, plus named L1 and JumpReLU
+- Trained on Elhage toy superposition
 
 | | This repo | OpenAI / Anthropic SAE |
 |---|---|---|
