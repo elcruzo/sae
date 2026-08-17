@@ -4,33 +4,33 @@ From-scratch **TopK SAE** (OpenAI / Gao et al.), with named variants **L1** (ReL
 
 ## Default: TopK
 
-\[
+$$
 z = \mathrm{TopK}_k\bigl(W_{\mathrm{enc}}(x - b_{\mathrm{dec}}) + b_{\mathrm{enc}}\bigr)
 \qquad
 \hat x = W_{\mathrm{dec}} z + b_{\mathrm{dec}}
-\]
+$$
 
-Decoder columns are **unit-norm** (projected after every step). Loss is MSE; optional **AuxK** reconstructs the residual with the top-\(k_{\mathrm{aux}}\) dead latents (coefficient typically \(1/32\)). Encoder init = decoder transpose.
+Decoder columns are **unit-norm** (projected after every step). Loss is MSE; optional **AuxK** reconstructs the residual with the top-$k_{\mathrm{aux}}$ dead latents (coefficient typically $1/32$). Encoder init = decoder transpose.
 
 ## Named variant: L1
 
-`L1SAE`: \(z=\mathrm{ReLU}(\cdot)\), loss \(= \mathrm{MSE} + \lambda \|z\|_1\). Same unit-norm decoder projection (otherwise L1 is gamed by shrinking activations / growing decoder).
+`L1SAE`: $z=\mathrm{ReLU}(\cdot)$, loss $= \mathrm{MSE} + \lambda \|z\|_1$. Same unit-norm decoder projection (otherwise L1 is gamed by shrinking activations / growing decoder).
 
 ## Named variant: JumpReLU
 
-`JumpReLUSAE`: \(z = z_{\mathrm{pre}} \cdot H(z_{\mathrm{pre}} - \theta)\) with per-latent \(\theta\). Threshold and L0 are trained with rectangle-kernel straight-through estimators (Rajamanoharan et al. Eqs. 11–12):
+`JumpReLUSAE`: $z = z_{\mathrm{pre}} \cdot H(z_{\mathrm{pre}} - \theta)$ with per-latent $\theta$. Threshold and L0 are trained with rectangle-kernel straight-through estimators (Rajamanoharan et al. Eqs. 11–12):
 
-\[
+$$
 \frac{\partial}{\partial\theta}\mathrm{JumpReLU}_\theta(z) = -\frac{\theta}{\varepsilon}K\!\left(\frac{z-\theta}{\varepsilon}\right),
 \qquad
 \frac{\partial}{\partial\theta}H(z-\theta) = -\frac{1}{\varepsilon}K\!\left(\frac{z-\theta}{\varepsilon}\right)
-\]
+$$
 
-with \(K=\mathrm{rect}\) and bandwidth \(\varepsilon\).
+with $K=\mathrm{rect}$ and bandwidth $\varepsilon$.
 
 ## Dead-latent resampling
 
-Latents silent for \(N\) steps are **resampled** onto high-residual examples (Anthropic): decoder column ← unit residual direction; encoder row ← \(\sqrt{d}\) times that direction; \(b_{\mathrm{enc}}\leftarrow 0\).
+Latents silent for $N$ steps are **resampled** onto high-residual examples (Anthropic): decoder column ← unit residual direction; encoder row ← $\sqrt{d}$ times that direction; $b_{\mathrm{enc}}\leftarrow 0$.
 
 Recovery metric: Hungarian-match decoder columns to the true feature dictionary; report mean cosine.
 
