@@ -42,6 +42,29 @@ Recovery metric: Hungarian-match decoder columns to the true feature dictionary;
 
 Also cited: Bricken et al. *Towards Monosemanticity* (Anthropic, 2023); Templeton et al. *Scaling Monosemanticity* (2024).
 
+## Compared to OpenAI / Anthropic SAE
+
+**What you learn here:** TopK SAE (OpenAI), unit-norm decoder, AuxK dead-latent loss, plus named L1 and JumpReLU — trained on Elhage toy superposition.
+
+| | This repo | OpenAI / Anthropic SAE |
+|---|---|---|
+| Data | Toy features | LM residual streams |
+| Default | TopK + unit-norm $W_{\mathrm{dec}}$ | TopK (Gao) / JumpReLU (GDM) |
+| Eval | Hungarian match cosine | MSE–L0 frontier, probes |
+| Scale | Seconds on CPU | Millions of latents |
+
+### Numbers (2026-08-16, Apple M5, darwin arm64 CPU)
+
+| Metric | This repo | Baseline | Source |
+|---|---|---|---|
+| TopK match_cos (400 steps) | 0.936 | Feature recovery ↑ with scale | [Gao et al. 2024](https://arxiv.org/abs/2406.04093) |
+| TopK MSE / nnz | 0.0147 / 1.0 | TopK beats L1 on Pareto | same |
+| L1 / JumpReLU frac_zero | 0.765 / 0.807 | L0 control via $k$ or $\theta$ | Gao / Rajamanoharan |
+
+```bash
+python main.py
+```
+
 ## Run
 
 ```bash
