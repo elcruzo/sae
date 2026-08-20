@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import itertools
+
+import numpy as np
 import sae as sae_mod
 import torch
 import torch.nn.functional as F
@@ -11,6 +14,7 @@ from sae import (
     JumpReLUSAE,
     L1SAE,
     TopKSAE,
+    _linear_sum_assignment,
     heaviside_ste,
     hungarian_decoder_cosine,
     jump_relu,
@@ -87,6 +91,25 @@ def test_reconstruction_mse_drops():
     assert mse1 < mse0 * 0.6
     norms = sae.W_dec.norm(dim=0)
     assert torch.allclose(norms, torch.ones_like(norms), atol=1e-4)
+
+
+def _brute_min_assignment_cost(cost: np.ndarray) -> float:
+    n, m = cost.shape
+    if n <= m:
+        return float(min(sum(cost[i, cols[i]] for i in range(n)) for cols in itertools.permutations(range(m), n)))
+    return float(min(sum(cost[rows[j], j] for j in range(m)) for rows in itertools.permutations(range(n), m)))
+
+
+def test_linear_sum_assignment_matches_brute():
+    rng = np.random.default_rng(0)
+    for n, m in ((1, 1), (3, 3), (2, 4), (4, 2), (3, 5)):
+        cost = rng.normal(size=(n, m))
+        rows, cols = _linear_sum_assignment(cost)
+        assert len(rows) == min(n, m)
+        assert len(set(rows.tolist())) == len(rows)
+        assert len(set(cols.tolist())) == len(cols)
+        got = float(cost[rows, cols].sum())
+        assert abs(got - _brute_min_assignment_cost(cost)) < 1e-9
 
 
 def test_superposition_hungarian_cosine():

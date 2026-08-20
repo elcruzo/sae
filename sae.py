@@ -22,10 +22,10 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from scipy.optimize import linear_sum_assignment
 
 
 def rectangle(x: torch.Tensor) -> torch.Tensor:
@@ -344,12 +344,88 @@ def sample_superposition(
     return x
 
 
+def _linear_sum_assignment(cost: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Min-cost bipartite assignment (Kuhn–Munkres). Rectangular: min(n, m) pairs.
+
+    Port of the 1-based dual algorithm (each of n ≤ m rows gets a unique column).
+    When n > m the matrix is transposed so the shorter side is fully matched.
+    """
+    cost = np.asarray(cost, dtype=np.float64)
+    if cost.ndim != 2:
+        raise ValueError("cost must be 2-D")
+    n, m = cost.shape
+    if n == 0 or m == 0:
+        return np.array([], dtype=int), np.array([], dtype=int)
+
+    transpose = n > m
+    if transpose:
+        cost = cost.T.copy()
+        n, m = cost.shape
+    else:
+        cost = np.array(cost, copy=True)
+
+    inf = np.float64(1e100)
+    u = np.zeros(n + 1, dtype=np.float64)
+    v = np.zeros(m + 1, dtype=np.float64)
+    p = np.zeros(m + 1, dtype=np.int64)
+    way = np.zeros(m + 1, dtype=np.int64)
+    a = np.zeros((n + 1, m + 1), dtype=np.float64)
+    a[1:, 1:] = cost
+
+    for i in range(1, n + 1):
+        p[0] = i
+        j0 = 0
+        minv = np.full(m + 1, inf)
+        used = np.zeros(m + 1, dtype=bool)
+        while True:
+            used[j0] = True
+            i0 = int(p[j0])
+            delta = inf
+            j1 = 0
+            for j in range(1, m + 1):
+                if used[j]:
+                    continue
+                cur = a[i0, j] - u[i0] - v[j]
+                if cur < minv[j]:
+                    minv[j] = cur
+                    way[j] = j0
+                if minv[j] < delta:
+                    delta = minv[j]
+                    j1 = j
+            for j in range(m + 1):
+                if used[j]:
+                    u[int(p[j])] += delta
+                    v[j] -= delta
+                else:
+                    minv[j] -= delta
+            j0 = j1
+            if p[j0] == 0:
+                break
+        while True:
+            j1 = int(way[j0])
+            p[j0] = p[j1]
+            j0 = j1
+            if j0 == 0:
+                break
+
+    col_of_row = np.full(n, -1, dtype=int)
+    for j in range(1, m + 1):
+        i = int(p[j])
+        if i != 0:
+            col_of_row[i - 1] = j - 1
+    rows = np.arange(n, dtype=int)
+    cols = col_of_row
+    if transpose:
+        return cols, rows
+    return rows, cols
+
+
 def hungarian_decoder_cosine(W_dec: torch.Tensor, W_true: torch.Tensor) -> float:
     """Mean cosine after optimal matching of decoder columns to true features."""
     dec = F.normalize(W_dec.detach(), dim=0)
     true = F.normalize(W_true.detach(), dim=0)
     cos = (true.t() @ dec).cpu().numpy()
-    rows, cols = linear_sum_assignment(-cos)
+    rows, cols = _linear_sum_assignment(-cos)
     return float(cos[rows, cols].mean())
 
 

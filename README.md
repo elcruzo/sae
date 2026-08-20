@@ -32,7 +32,7 @@ with $K=\mathrm{rect}$ and bandwidth $\varepsilon$.
 
 Latents silent for $N$ steps are **resampled** onto high-residual examples (Anthropic): decoder column ← unit residual direction; encoder row ← $\sqrt{d}$ times that direction; $b_{\mathrm{enc}}\leftarrow 0$.
 
-Recovery metric: Hungarian-match decoder columns to the true feature dictionary; report mean cosine.
+Recovery metric: Kuhn–Munkres matching of decoder columns to the true feature dictionary; report mean cosine.
 
 ## Papers on disk
 
